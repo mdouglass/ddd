@@ -82,3 +82,22 @@ export function toICS(calendar: CalendarObject): string {
   str += 'END:' + calendar.type + '\r\n'
   return str
 }
+
+
+export function unfold(str: string): string {
+  return str
+    .split(/\r\n\s/)
+    .join('')
+    .replaceAll('\\n', '\n')
+    .replaceAll('\\,', ',')
+}
+
+export function fold(str: string): string {
+  return (
+    str
+      .replaceAll(',', '\\,')
+      .replaceAll('\n', '\\n')
+      .match(/.{1,60}/g)
+      ?.join('\r\n ') ?? ''
+  )
+}

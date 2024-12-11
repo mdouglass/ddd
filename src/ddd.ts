@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon'
-import { CalendarObject, fromICS, toICS } from './ics'
+import { CalendarObject, fold, fromICS, toICS, unfold } from './ics'
 
 export async function convert(url: string): Promise<string> {
   const calendar = await (await fetch(url)).text()
@@ -43,6 +43,37 @@ export async function convert(url: string): Promise<string> {
         vevent.properties.SUMMARY = match[1]
       }
       // console.log('after:  ' + vevent.properties.SUMMARY)
+    }
+
+    // various fixes to the DESCRIPTION field
+    if (typeof vevent.properties.DESCRIPTION === 'string') {
+      // console.log('before: ' + unfold(vevent.properties.DESCRIPTION) + '#')
+      let description = unfold(vevent.properties.DESCRIPTION)
+        .replaceAll('Group  3', 'Group 3')
+        .replaceAll(/ *Level (\d)/g, 'Group $1')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(
+          (line) =>
+            line.startsWith('Group 3') ||
+            line.startsWith('Group 2,3') ||
+            line.startsWith('Group 2, 2.5, and 3') ||
+            line.startsWith('Group 2.5 & 3') ||
+            line.startsWith('Group 2.5, 3') ||
+            line.startsWith('Group one do two repeats, group 2,2.5 & 3') ||
+            !line.startsWith('Group'),
+        )
+        .join('\n')
+        .replaceAll('\n\n\n', '\n')
+        .trim()
+
+      const match = description.match(/(.*?)\s*\(Arrival Time: .*\)$/s)
+      if (match) {
+        description = match[1]
+      }
+
+      vevent.properties.DESCRIPTION = fold(description)
+      // console.log('after:  ' + vevent.properties.DESCRIPTION + '#')
     }
     return vevent
   })
