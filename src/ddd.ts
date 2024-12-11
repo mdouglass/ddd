@@ -20,7 +20,7 @@ export async function convert(url: string): Promise<string> {
       delete vevent.properties.DTEND
     }
 
-    // convert any event that starts/ends at the same time to a 4 hour event
+    // convert any event that starts/ends at the same time to a 1 or 4 hour event
     const DTSTART_LOCAL = 'DTSTART;TZID=America/Los_Angeles'
     const DTEND_LOCAL = 'DTEND;TZID=America/Los_Angeles'
     const ICS_DATE_FORMAT = `yyyyMMdd'T'HHmmss`
@@ -31,7 +31,7 @@ export async function convert(url: string): Promise<string> {
       const [date, time] = vevent.properties[DTSTART_LOCAL].split('T')
       vevent.properties[DTEND_LOCAL] =
         DateTime.fromFormat(vevent.properties[DTSTART_LOCAL], ICS_DATE_FORMAT)
-          .plus({ hours: 4 })
+          .plus({ hours: vevent.properties.LOCATION === 'Zoom' ? 1 : 4 })
           .toFormat(ICS_DATE_FORMAT) ?? vevent.properties[DTSTART_LOCAL]
     }
 
