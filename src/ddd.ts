@@ -35,6 +35,15 @@ export async function convert(url: string): Promise<string> {
           .toFormat(ICS_DATE_FORMAT) ?? vevent.properties[DTSTART_LOCAL]
     }
 
+    // remove See Notes from SUMMARY
+    if (typeof vevent.properties.SUMMARY === 'string') {
+      // console.log('before: ' + vevent.properties.SUMMARY)
+      const match = vevent.properties.SUMMARY.match(/^(.*?)\s*-?\s*see notes\.?$/i)
+      if (match) {
+        vevent.properties.SUMMARY = match[1]
+      }
+      // console.log('after:  ' + vevent.properties.SUMMARY)
+    }
     return vevent
   })
 
