@@ -57,6 +57,7 @@ export async function convert(url: string): Promise<string> {
           (line) =>
             line.startsWith('Group 3') ||
             line.startsWith('Group 2,3') ||
+            line.startsWith('Group 2, and 3') ||
             line.startsWith('Group 2, 2.5, and 3') ||
             line.startsWith('Group 2.5 & 3') ||
             line.startsWith('Group 2.5, 3') ||
