@@ -10,6 +10,15 @@ export async function convert(url: string): Promise<string> {
   vcal.properties.NAME = 'DDD'
   vcal.properties.PRODID = 'ddd/0.1.0' // take from package.json
   vcal.properties.VEVENT = (vcal.properties.VEVENT as CalendarObject[]).map((vevent) => {
+    console.log('', vevent.properties)
+    console.log('Event:')
+    for (const [key,value] of Object.entries(vevent.properties)) {
+      if (['DTSTAMP', 'SEQUENCE', 'LAST-MODIFIED', 'UID'].includes(key)) {
+        continue
+      }
+      console.log(`  ${key}:`, value)
+    }
+
     // convert any event that starts at midnight to an all day events
     if (
       typeof vevent.properties.DTSTART === 'string' &&
