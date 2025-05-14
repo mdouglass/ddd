@@ -1,20 +1,28 @@
 import { convert } from './ddd'
 
-export interface Env {
-  DDD_ICS: string
-}
+export default {
+  fetch: async (request, env, ctx) => {
+    const url = URL.parse(request.url)
+    if (!url) {
+      return new Response('Bad Request', { status: 400 })
+    }
 
-const fetch: ExportedHandlerFetchHandler<Env, unknown> = async (request, env, ctx) => {
-  console.log(request.url)
-  console.dir(URL.parse(request.url))
-  return new Response(await convert(env.DDD_ICS), {
-    headers: {
-      'content-type':
-        URL.parse(request.url)?.searchParams.get('mime') === 'plain'
-          ? 'text/plain'
-          : 'text/calendar',
-    },
-  })
-}
+    const responseHeaders = {
+      headers: {
+        'content-type':
+          URL.parse(request.url)?.searchParams.get('mime') === 'plain'
+            ? 'text/plain'
+            : 'text/calendar',
+      },
+    }
 
-export default { fetch } satisfies ExportedHandler<Env>
+    switch (url.pathname) {
+      case '/original.ics':
+        return new Response(await (await fetch(env.DDD_ICS)).text(), responseHeaders)
+      case '/group3-legacy.ics':
+        return new Response(await convert(env.DDD_ICS), responseHeaders)
+      default:
+        return new Response('Not Found', { status: 404 })
+    }
+  },
+} satisfies ExportedHandler<Env>

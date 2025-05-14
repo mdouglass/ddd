@@ -83,7 +83,6 @@ export function toICS(calendar: CalendarObject): string {
   return str
 }
 
-
 export function unfold(str: string): string {
   return str
     .split(/\r\n\s/)
