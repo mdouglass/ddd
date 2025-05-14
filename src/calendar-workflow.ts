@@ -123,10 +123,6 @@ export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
           `standardize VEVENT #${i}`,
           { retries: { limit: 3, delay: '60 seconds', backoff: 'linear' }, timeout: '60 seconds' },
           async () => {
-            if (i !== 87) {
-              return originalEvents[i]
-            }
-
             const originalEvent = originalEvents[i]
             const originalEventHashKey = hashKey(originalEvent)
 

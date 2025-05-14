@@ -96,8 +96,8 @@ async function getOrCreateWorkflow<PARAMS>(
   }
 }
 
-export async function convertAI(env: Env, calendarText: string): Promise<string> {
-  const calendarHash = hash('sha256', calendarText, 'hex')
+export async function convertAI(env: Env, url: URL, calendarText: string): Promise<string> {
+  const calendarHash = hash('sha256', calendarText, 'hex') + (url.searchParams.get('retry') ?? '')
 
   // do we have a completed and converted calendar
   const workflow = await getOrCreateWorkflow(env.CALENDAR_WORKFLOW, {

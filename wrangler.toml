@@ -76,7 +76,7 @@ enabled = true
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
 [[kv_namespaces]]
 binding = "STANDARD_EVENTS"
-id = "b73634f8b87f4428aee4b0573de92885"
+id = "482ad65bb4ce4e2f8d396e00d8af139c"
 
 # Bind an mTLS certificate. Use to present a client certificate when communicating with another service.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#mtls-certificates

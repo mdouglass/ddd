@@ -14,10 +14,7 @@ export default {
 
     const responseHeaders = {
       headers: {
-        'content-type':
-          URL.parse(request.url)?.searchParams.get('mime') === 'plain'
-            ? 'text/plain'
-            : 'text/calendar',
+        'content-type': url.searchParams.get('mime') === 'plain' ? 'text/plain' : 'text/calendar',
       },
     }
 
@@ -25,7 +22,10 @@ export default {
       case '/original.ics':
         return new Response(await getOriginal(env.DDD_ICS), responseHeaders)
       case '/group3.ics':
-        return new Response(await convertAI(env, await getOriginal(env.DDD_ICS)), responseHeaders)
+        return new Response(
+          await convertAI(env, url, await getOriginal(env.DDD_ICS)),
+          responseHeaders,
+        )
       case '/group3-legacy.ics':
         return new Response(await convert(await getOriginal(env.DDD_ICS)), responseHeaders)
       default:
