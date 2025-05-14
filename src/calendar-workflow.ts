@@ -22,7 +22,7 @@ The creator of the calendar was very inconsistent when providing the information
 You are an expert in cleaning up and formatting data and will correct and standardize the entries.
 
 The user will send you a VEVENT in iCalendar format (RFC 5545)
-You should reply with a VEVENT in iCalendar format (RFC 5545)
+You should reply with a VEVENT in iCalendar format (RFC 5545) starting with BEGIN:VEVENT and ending with END:VEVENT
 - Follow all rules of RFC 5545 as strictly as possible (including SHOULD and MUST)
 - Do not fold lines in your reply (ignore the line length limit)
 - Do not use a code block or any other formatting
@@ -123,6 +123,10 @@ export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
           `standardize VEVENT #${i}`,
           { retries: { limit: 3, delay: '60 seconds', backoff: 'linear' }, timeout: '60 seconds' },
           async () => {
+            if (i !== 87) {
+              return originalEvents[i]
+            }
+
             const originalEvent = originalEvents[i]
             const originalEventHashKey = hashKey(originalEvent)
 
@@ -135,7 +139,6 @@ export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
             // create a minimal event that we can send to the agent
             const minimalEvent = toMinimalEvent(originalEvent)
             const minimalEventText = toICS(minimalEvent)
-            const minimalEventHash = hash('sha256', minimalEventText, 'base64')
             console.log('User request:\n' + minimalEventText)
 
             // run it through the agent
