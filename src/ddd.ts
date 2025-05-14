@@ -85,11 +85,22 @@ export async function convert(calendar: string): Promise<string> {
   return toICS(vcal)
 }
 
+async function getOrCreateWorkflow<PARAMS>(
+  workflow: Workflow<PARAMS>,
+  options: WorkflowInstanceCreateOptions<PARAMS>,
+): Promise<WorkflowInstance> {
+  try {
+    return await workflow.get(options.id ?? '')
+  } catch (e) {
+    return await workflow.create(options)
+  }
+}
+
 export async function convertAI(env: Env, calendarText: string): Promise<string> {
   const calendarHash = hash('sha256', calendarText, 'hex')
 
   // do we have a completed and converted calendar
-  const workflow = await env.CALENDAR_WORKFLOW.create({
+  const workflow = await getOrCreateWorkflow(env.CALENDAR_WORKFLOW, {
     id: calendarHash,
     params: { calendarText },
   })
@@ -101,7 +112,7 @@ export async function convertAI(env: Env, calendarText: string): Promise<string>
   // processing is ongoing, build the final calendar as best we can from already converted pieces
   const calendar = fromICS(calendarText)
 
-  const originalEvents = (calendar.properties.VEVENT as CalendarObject[])
+  const originalEvents = calendar.properties.VEVENT as CalendarObject[]
   const originalEventHashKeys = originalEvents.map((oe) => hashKey(oe))
   const standardEvents = await hasStandardEvents(env, originalEventHashKeys)
 
