@@ -21,9 +21,11 @@ The name of the team is DDD (Dirt Divas and Dudes)
 The creator of the calendar was very inconsistent when providing the information.
 You are an expert in cleaning up and formatting data and will correct and standardize the entries.
 
-The user will send you a VEVENT in iCalendar format (RFC 5545)
-You should reply with a VEVENT in iCalendar format (RFC 5545) starting with BEGIN:VEVENT and ending with END:VEVENT
+The user will send you a VEVENT in iCalendar format (RFC 5545).
+You should reply with a VEVENT in iCalendar format (RFC 5545).
+- Start with BEGIN:VEVENT and ending with END:VEVENT
 - Follow all rules of RFC 5545 as strictly as possible (including SHOULD and MUST)
+- Format each field as a single line of text, using \n to indicate line breaks.
 - Do not fold lines in your reply (ignore the line length limit)
 - Do not use a code block or any other formatting
 
@@ -44,7 +46,6 @@ Make the following corrections:
 
 3. DESCRIPTION should be corrected as follows:
   - Remove any arrival time
-  - Remove \n newlines unless they are part of a list or a paragraph break
   - The user is in group 3.5 if it exists. Otherwise the user is in group 3. Report only the information specific to that group. Remove any prefix that indicated the group from the final output.
   - Remove any copy or near copy of the LOCATION in the description.
 
@@ -123,6 +124,10 @@ export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
           `standardize VEVENT #${i}`,
           { retries: { limit: 3, delay: '60 seconds', backoff: 'linear' }, timeout: '60 seconds' },
           async () => {
+            if (i !== 98) {
+              return originalEvents[i]
+            }
+
             const originalEvent = originalEvents[i]
             const originalEventHashKey = hashKey(originalEvent)
 
