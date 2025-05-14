@@ -122,7 +122,7 @@ export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
       standardEvents.push(
         await step.do(
           `standardize VEVENT #${i}`,
-          { retries: { limit: 3, delay: '60 seconds', backoff: 'linear' }, timeout: '60 seconds' },
+          { retries: { limit: 3, delay: '60 seconds', backoff: 'constant' }, timeout: '60 seconds' },
           async () => {
             const originalEvent = originalEvents[i]
             const originalEventHashKey = hashKey(originalEvent)
