@@ -8,11 +8,16 @@
     "dev": "wrangler dev",
     "start": "wrangler dev",
     "test": "vitest",
-    "cf-typegen": "wrangler types",
-    "typecheck": "npm run cf-typegen && tsc"
+    "typegen": "wrangler types",
+    "typecheck": "npm run typegen && tsc"
+  },
+  "dependencies": {
+    "@google/genai": "0.14.0",
+    "lodash": "4.17.21"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.8.27",
+    "@types/lodash": "4.17.16",
     "@types/luxon": "3.6.2",
     "@types/node": "22.15.17",
     "luxon": "3.6.1",

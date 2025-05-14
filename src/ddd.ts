@@ -1,10 +1,13 @@
 import { DateTime } from 'luxon'
 import { CalendarObject, fold, fromICS, toICS, unfold } from './ics'
+import { hash } from 'node:crypto'
+import { hashKey, hasStandardEvents } from './calendar-workflow'
 
-export async function convert(url: string): Promise<string> {
-  const calendar = await (await fetch(url)).text()
-  // return calendar // see original for testing
+export async function getOriginal(url: string): Promise<string> {
+  return (await fetch(url)).text()
+}
 
+export async function convert(calendar: string): Promise<string> {
   // transform the calendar to the way we want it
   const vcal = fromICS(calendar)
   vcal.properties.NAME = 'DDD'
@@ -80,4 +83,34 @@ export async function convert(url: string): Promise<string> {
   })
 
   return toICS(vcal)
+}
+
+export async function convertAI(env: Env, calendarText: string): Promise<string> {
+  const calendarHash = hash('sha256', calendarText, 'hex')
+
+  // do we have a completed and converted calendar
+  const workflow = await env.CALENDAR_WORKFLOW.create({
+    id: calendarHash,
+    params: { calendarText },
+  })
+  const status = await workflow.status()
+  if (status.status === 'complete' && typeof status.output === 'string') {
+    return status.output
+  }
+
+  // processing is ongoing, build the final calendar as best we can from already converted pieces
+  const calendar = fromICS(calendarText)
+
+  const originalEvents = (calendar.properties.VEVENT as CalendarObject[])
+  const originalEventHashKeys = originalEvents.map((oe) => hashKey(oe))
+  const standardEvents = await hasStandardEvents(env, originalEventHashKeys)
+
+  return toICS({
+    type: 'VCALENDAR',
+    properties: {
+      NAME: 'DDD',
+      PRODID: 'ddd/0.1.0', // take from package.json
+      VEVENT: standardEvents.map((se, index) => se ?? originalEvents[index]),
+    },
+  })
 }

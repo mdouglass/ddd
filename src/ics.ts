@@ -10,7 +10,7 @@ function splitLine(line: string): [string, string] {
   return [line.slice(0, index), line.slice(index + 1)]
 }
 
-export function fromICS(calendar: string): CalendarObject {
+export function fromICS(calendar: string, rootType = 'VCALENDAR'): CalendarObject {
   const stack: CalendarObject[] = [{ type: 'root', properties: {} }]
 
   for (const line of calendar.split(/\r\n|\n|\r/)) {
@@ -58,21 +58,27 @@ export function fromICS(calendar: string): CalendarObject {
     throw new Error('Unbalanced BEGIN/END')
   }
 
-  if (!Array.isArray(stack[0].properties.VCALENDAR) || stack[0].properties.VCALENDAR.length !== 1) {
-    throw new Error('More than one VCALENDAR')
+  const root = stack[0].properties[rootType]
+  if (!root || !Array.isArray(root)) {
+    throw new Error('Missing root type: ' + rootType)
   }
-
-  return stack[0].properties.VCALENDAR[0]
+  if (root.length !== 1) {
+    throw new Error(`Found ${root.length} ${rootType}, expected 1`)
+  }
+  return root[0]
 }
 
 export function toICS(calendar: CalendarObject): string {
   let str = 'BEGIN:' + calendar.type + '\r\n'
-  for (const [key, value] of Object.entries(calendar.properties)) {
+  const sortedProperties = Object.entries(calendar.properties).sort(([lhsKey], [rhsKey]) =>
+    lhsKey.localeCompare(rhsKey),
+  )
+  for (const [key, value] of sortedProperties) {
     if (!Array.isArray(value)) {
       str += key + ':' + value + '\r\n'
     }
   }
-  for (const value of Object.values(calendar.properties)) {
+  for (const [, value] of sortedProperties) {
     if (Array.isArray(value)) {
       for (const child of value) {
         str += toICS(child)
@@ -99,4 +105,11 @@ export function fold(str: string): string {
       .match(/.{1,60}/g)
       ?.join('\r\n ') ?? ''
   )
+}
+
+export function toTimestamp(date: Date): string {
+  return date
+    .toISOString()
+    .replace(/[-:]/g, '') // Remove hyphens and colons
+    .replace(/\.\d+Z$/, '') // Remove milliseconds and Z
 }

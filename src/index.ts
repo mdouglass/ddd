@@ -1,4 +1,9 @@
-import { convert } from './ddd'
+import _ from 'lodash'
+import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers'
+import { convert, convertAI, getOriginal } from './ddd'
+import { CalendarObject, fromICS, toICS } from './ics'
+import { GenerateContentParameters, GoogleGenAI } from '@google/genai'
+import { CalendarWorkflow } from './calendar-workflow'
 
 export default {
   fetch: async (request, env, ctx) => {
@@ -18,11 +23,15 @@ export default {
 
     switch (url.pathname) {
       case '/original.ics':
-        return new Response(await (await fetch(env.DDD_ICS)).text(), responseHeaders)
+        return new Response(await getOriginal(env.DDD_ICS), responseHeaders)
+      case '/group3.ics':
+        return new Response(await convertAI(env, await getOriginal(env.DDD_ICS)), responseHeaders)
       case '/group3-legacy.ics':
-        return new Response(await convert(env.DDD_ICS), responseHeaders)
+        return new Response(await convert(await getOriginal(env.DDD_ICS)), responseHeaders)
       default:
         return new Response('Not Found', { status: 404 })
     }
   },
 } satisfies ExportedHandler<Env>
+
+export { CalendarWorkflow } from './calendar-workflow'
