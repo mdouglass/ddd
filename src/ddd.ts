@@ -97,31 +97,38 @@ async function getOrCreateWorkflow<PARAMS>(
 }
 
 export async function convertAI(env: Env, url: URL, calendarText: string): Promise<string> {
-  const calendarHash = hash('sha256', calendarText, 'hex') + (url.searchParams.get('retry') ?? '')
+  try {
+    const retry = url.searchParams.get('retry') ?? ''
+    const isRetry = retry.length > 0
+    const calendarHash = hash('sha256', calendarText, 'hex') + retry
 
-  // do we have a completed and converted calendar
-  const workflow = await getOrCreateWorkflow(env.CALENDAR_WORKFLOW, {
-    id: calendarHash,
-    params: { calendarText },
-  })
-  const status = await workflow.status()
-  if (status.status === 'complete' && typeof status.output === 'string') {
-    return status.output
+    // do we have a completed and converted calendar
+    const workflow = await getOrCreateWorkflow(env.CALENDAR_WORKFLOW, {
+      id: calendarHash,
+      params: { calendarText, isRetry },
+    })
+    const status = await workflow.status()
+    if (status.status === 'complete' && typeof status.output === 'string') {
+      return status.output
+    }
+
+    // processing is ongoing, build the final calendar as best we can from already converted pieces
+    const calendar = fromICS(calendarText)
+
+    const originalEvents = calendar.properties.VEVENT as CalendarObject[]
+    const originalEventHashKeys = originalEvents.map((oe) => hashKey(oe))
+    const standardEvents = await hasStandardEvents(env, originalEventHashKeys)
+
+    return toICS({
+      type: 'VCALENDAR',
+      properties: {
+        NAME: 'KHraces Trail Team',
+        PRODID: 'ddd/0.1.0', // take from package.json
+        VEVENT: standardEvents.map((se, index) => se ?? originalEvents[index]),
+      },
+    })
+  } catch (e) {
+    console.error(e.stack)
+    throw e
   }
-
-  // processing is ongoing, build the final calendar as best we can from already converted pieces
-  const calendar = fromICS(calendarText)
-
-  const originalEvents = calendar.properties.VEVENT as CalendarObject[]
-  const originalEventHashKeys = originalEvents.map((oe) => hashKey(oe))
-  const standardEvents = await hasStandardEvents(env, originalEventHashKeys)
-
-  return toICS({
-    type: 'VCALENDAR',
-    properties: {
-      NAME: 'DDD',
-      PRODID: 'ddd/0.1.0', // take from package.json
-      VEVENT: standardEvents.map((se, index) => se ?? originalEvents[index]),
-    },
-  })
 }

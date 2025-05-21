@@ -37,11 +37,17 @@ export function fromICS(calendar: string, rootType = 'VCALENDAR'): CalendarObjec
 
         const parent = stack[stack.length - 1]
         const collection = (parent.properties[obj.type] ??= [])
-        if (!Array.isArray(collection)) throw new Error('Parent cannot collect ' + obj.type)
-
-        if (Array.isArray(parent.properties[obj.type])) {
-          collection.push(obj)
+        if (!Array.isArray(collection)) {
+          throw new Error('Parent cannot collect ' + obj.type)
         }
+        collection.push(obj)
+
+        for (const [key, value] of Object.entries(obj.properties)) {
+          if (typeof value === 'string') {
+            obj.properties[key] = unescape(unfold2(value))
+          }
+        }
+
         break
       }
       default: {
@@ -74,8 +80,8 @@ export function toICS(calendar: CalendarObject): string {
     lhsKey.localeCompare(rhsKey),
   )
   for (const [key, value] of sortedProperties) {
-    if (!Array.isArray(value)) {
-      str += key + ':' + value + '\r\n'
+    if (!Array.isArray(value) && typeof value === 'string') {
+      str += key + ':' + fold2(escape(value), key.length + 1) + '\r\n'
     }
   }
   for (const [, value] of sortedProperties) {
@@ -112,4 +118,41 @@ export function toTimestamp(date: Date): string {
     .toISOString()
     .replace(/[-:]/g, '') // Remove hyphens and colons
     .replace(/\.\d+Z$/, '') // Remove milliseconds and Z
+}
+
+export function fold2(str: string, firstLineUsed: number): string {
+  // split str into equal lines of 72 characters
+  // and add a \r\n before each line
+  // except the first line which is 72 - firstLineUsed characters
+
+  const lines: string[] = []
+  let idx = 0
+  let firstLineLen = 72 - firstLineUsed
+  if (firstLineLen < 1) firstLineLen = 1
+  lines.push(str.slice(idx, idx + firstLineLen))
+  idx += firstLineLen
+  while (idx < str.length) {
+    lines.push(str.slice(idx, idx + 72))
+    idx += 72
+  }
+  return lines.join('\r\n ')
+
+}
+
+export function unfold2(str: string): string {
+  return str.split(/\r\n\s/).join('')
+}
+
+function escape(str: string): string {
+  return str
+    .replaceAll('\\', '\\\\')
+    .replaceAll('\n', '\\n')
+    .replaceAll(',', '\\,')
+    .replaceAll(';', '\\;')
+}
+
+export function unescape(str: string): string {
+  return str.replaceAll(/\\[\\,;Nn]/g, (match) =>
+    match[1] === 'n' || match[1] === 'N' ? '\n' : match[1],
+  )
 }

@@ -1,8 +1,9 @@
 import _ from 'lodash'
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers'
-import { CalendarObject, fromICS, toICS, toTimestamp } from './ics'
-import { GenerateContentParameters, GoogleGenAI } from '@google/genai'
+import { CalendarObject, fromICS, toICS } from './ics'
+import { Content, GenerateContentParameters, GoogleGenAI } from '@google/genai'
 import { hash } from 'node:crypto'
+import { DateTime } from 'luxon'
 
 const generateParameters: Pick<GenerateContentParameters, 'model' | 'config'> = {
   model: 'gemini-2.5-flash-preview-04-17',
@@ -11,48 +12,91 @@ const generateParameters: Pick<GenerateContentParameters, 'model' | 'config'> = 
     temperature: 0,
     topP: 0.1,
     systemInstruction: `
-This is a list of events from the calendar of a trail running team. The trail running team
-consists of multiple groups of various skill levels. The groups are Group 1, Group 2, Group 3
-and Group 4. Sometimes groups are combined for a run, so you may see Group 2,3 or Group 2,3,4.
+You are an expert in cleaning up and formatting descriptions of events for a trail running team.
+The trail running team consists of multiple groups of various skill levels. 
+The groups are Group 1, Group 2, Group 3 and Group 4. 
+Sometimes groups are combined for a run, so you may see Group 2,3 or Group 2,3,4.
 Level is a synonym for group.
 Sometimes there is an intermediate group, such as Group 2.5 or Level 3.5.
-The name of the team is DDD (Dirt Divas and Dudes)
+The name of the team is KHraces Trail Team or DDD (Dirt Divas and Dudes).
 
-The creator of the calendar was very inconsistent when providing the information.
-You are an expert in cleaning up and formatting data and will correct and standardize the entries.
+The first line of the user's message will be an initial summary of the event. The second and remaining lines will be a description of the event.
+You should reply in the following format:
 
-The user will send you a VEVENT in iCalendar format (RFC 5545).
-You should reply with a VEVENT in iCalendar format (RFC 5545).
-- Start with BEGIN:VEVENT and ending with END:VEVENT
-- Follow all rules of RFC 5545 as strictly as possible (including SHOULD and MUST)
-- Format each field as a single line of text, using \n to indicate line breaks.
-- Do not fold lines in your reply (ignore the line length limit)
-- Do not use a code block or any other formatting
+Summary will one line of text providing a summary of the type of event
+- Remove "KHraces Trail Team - " from the beginning of the summary
+- If the entire team practices together at a specific real world location, specify Team Practice and the location
+- Otherwise, provide a short description of the type of workout and the mileage 
+  - common workout types are "Easy 8mi", "Hill Repeats 3x1mi", "Long 20mi", "Speed Legs 6mi", "Fast Finish 6mi"
+- If there are extra non-running workouts, add that to the summary as "& Workouts"
+- Use Title Case for the summary
+- If there are workouts and runs, please list the run first, then the workouts
 
-Make the following corrections:
-
-1. DTSTART and DTEND dates should be corrected as follows:
-  - If the start and end dates are midnight, report the event as an all day event (DTSTART contains only a date and DTEND is not set).
-  - If the start and end dates are the same:
-    - change the end date to 1 hour later if the location is Zoom
-    - otherwise, change the end date to 4 hours later
-
-2. SUMMARY should be corrected as follows:
-  - If the entire team practices together at a specific real world location, specify Team Practice and the location
-  - Otherwise, provide a short description of the type of workout and the mileage 
-    - common workout types are "Easy 8mi", "Hill Repeats 3x1mi", "Long 20mi", "Speed Legs 6mi", "Fast Finish 6mi"
-  - If there are extra non-running workouts, add that to the summary as "& Workouts"
-  - Use Title Case for the summary
-
-3. DESCRIPTION should be corrected as follows:
-  - Remove any arrival time
-  - The user is in group 3.5 if it exists. Otherwise the user is in group 3. Report only the information specific to that group. Remove any prefix that indicated the group from the final output.
-  - Remove any copy or near copy of the LOCATION in the description.
-
-4. LOCATION should not be corrected.
+Description will be multiple lines of text describing the event
+- Remove any (Arrival Time:)
+- Remove any Location:
+- If different groups receive different instructions, preferentially provide only the instructions for group 3.5. If group 3.5 does not exist, provide the instructions for group 3.
 `,
   },
 }
+
+const initialContents: Content[] = [
+  {
+    role: 'user',
+    parts: [
+      {
+        text: `KHraces Trail Team - Team Practice - still casual miles\nLocation: Fullerton Loop\n This is a very casual team meet up. It will be a 10 mile loop out and back. Those wanting more miles can repeat it and those wanting less can turn around early.  (Arrival Time:  6:30 AM (Pacific Time (US & Canada)))`,
+      },
+    ],
+  },
+  {
+    role: 'model',
+    parts: [
+      {
+        text: `Team Practice - Fullerton Loop\nThis is a very casual team meet up. It will be a 10 mile loop out and back. Those wanting more miles can repeat it and those wanting less can turn around early.`,
+      },
+    ],
+  },
+  {
+    role: 'user',
+    parts: [
+      {
+        text: `KHraces Trail Team - Hills- You missed these! See Notes.\nGroup 1: Find a steep hill about a 1/4 mile long (it can be a little longer than that). It can be road or trail. Run up to the top running every step without stopping. This is NOT a sprint. Just try and run every step, and repeat this three more times. Each time you run down push the pace a tiny bit.\n\nGroup 2: Find a steep hill about a 1/2 mile long. It can be road or trail. Run up to the top running every step without stopping. This is NOT a sprint. Just try and run every step, and repeat this four more times. Each time you run down push the pace a tiny bit.\n\nGroup 2.5 & 3: Find a steep hill about a mile long (it can be a little longer than that). Road or trail. Run up to the top running every step without stopping. This is NOT a sprint. Just try and run every step, and repeat this three more times. Each time you run down push the pace a tiny bit.\n\nGroup 4: Find a steep hill about a mile long (it can be a little longer than that). Run up to the top running every step without stopping. This is NOT a sprint. Just try and run every step, and repeat this four more times. Each time you run down push the pace a tiny bit.  (Arrival Time: 12:00 PM (Pacific Time (US & Canada))) `,
+      },
+    ],
+  },
+  {
+    role: 'model',
+    parts: [
+      {
+        text: `Hills Repeats 4x1mi\nFind a steep hill about a mile long (it can be a little longer than that). Road or trail. Run up to the top running every step without stopping. This is NOT a sprint. Just try and run every step, and repeat this three more times. Each time you run down push the pace a tiny bit.`,
+      },
+    ],
+  },
+  {
+    role: 'user',
+    parts: [
+      {
+        text: `KHraces Trail Team - SEE NOTES\nPlease do this core workout & at home workout plus runs below\nWorkouts:\n1.https://www.youtube.com/watch?v=Auo8veVyRIY&t=10s\n2. https://www.youtube.com/watch?v=ysKkAA9jK0Q&list=WL&index=19&t=25s\n\nRuns:\nGroup 1: 5 miles w/the last mile pushing the pace as hard as you can\nGroup 2 and 2.5: 7 miles w/the last mile pushing the pace as hard as you can\nGroup 3: 9 miles w/the last mile pushing the pace as hard as you can\nGroup 4: 9 miles w/the last mile pushing the pace as hard as you can  (Arrival Time: 12:00 PM (Pacific Time (US & Canada)))`,
+      },
+    ],
+  },
+  {
+    role: 'model',
+    parts: [
+      {
+        text: `Fast Finish 9mi + Workouts\n9 miles w/the last mile pushing the pace as hard as you can\n\nWorkouts:\n1. https://www.youtube.com/watch?v=Auo8veVyRIY&t=10s\n2. https://www.youtube.com/watch?v=ysKkAA9jK0Q&list=WL&index=19&t=25s`,
+      },
+    ],
+  },
+  {
+    role: 'user',
+    parts: [
+      { text: `KHraces Trail Team - Rest\n(Arrival Time: 12:00 PM (Pacific Time (US & Canada)))` },
+    ],
+  },
+  { role: 'model', parts: [{ text: `Rest\nRest` }] },
+]
 
 export function toMinimalEvent(event: CalendarObject): CalendarObject {
   return {
@@ -89,8 +133,8 @@ export async function hasStandardEvents(
 ): Promise<(CalendarObject | undefined)[]> {
   if (hashKeys.length > 100) {
     return [
-      ...await hasStandardEvents(env, hashKeys.slice(0, 100)),
-      ...await hasStandardEvents(env, hashKeys.slice(100))
+      ...(await hasStandardEvents(env, hashKeys.slice(0, 100))),
+      ...(await hasStandardEvents(env, hashKeys.slice(100))),
     ]
   }
 
@@ -107,11 +151,15 @@ export async function putStandardEvent(
   event: CalendarObject,
 ): Promise<void> {
   const eventText = toICS(event)
+  console.log({ event, eventText })
   await env.STANDARD_EVENTS.put(hashKey, eventText)
 }
 
 export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
-  override async run(event: Readonly<WorkflowEvent<{ calendarText: string }>>, step: WorkflowStep) {
+  override async run(
+    event: Readonly<WorkflowEvent<{ calendarText: string; isRetry: boolean }>>,
+    step: WorkflowStep,
+  ) {
     const calendar = await step.do('parse ICS', async () => {
       return fromICS(event.payload.calendarText)
     })
@@ -122,39 +170,76 @@ export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
       standardEvents.push(
         await step.do(
           `standardize VEVENT #${i}`,
-          { retries: { limit: 3, delay: '60 seconds', backoff: 'constant' }, timeout: '60 seconds' },
+          {
+            retries: { limit: 3, delay: '60 seconds', backoff: 'constant' },
+            timeout: '60 seconds',
+          },
           async () => {
             const originalEvent = originalEvents[i]
             const originalEventHashKey = hashKey(originalEvent)
 
             // check to see if we converted this event on a previous calendar
-            const cachedStandardEvent = await hasStandardEvent(this.env, originalEventHashKey)
+            const cachedStandardEvent = event.payload.isRetry
+              ? undefined
+              : await hasStandardEvent(this.env, originalEventHashKey)
             if (cachedStandardEvent) {
               return cachedStandardEvent
             }
 
-            // create a minimal event that we can send to the agent
-            const minimalEvent = toMinimalEvent(originalEvent)
-            const minimalEventText = toICS(minimalEvent)
-            console.log('User request:\n' + minimalEventText)
+            // grab the event description
+            const userText = ((originalEvent.properties.SUMMARY as string) +
+              '\n' +
+              originalEvent.properties.DESCRIPTION) as string
+            console.log('User text:\n' + userText)
 
             // run it through the agent
             const ai = new GoogleGenAI({ apiKey: this.env.GEMINI_API_KEY })
-            const { text: standardEventText } = await ai.models.generateContent({
+            const { text: assistantText } = await ai.models.generateContent({
               ...generateParameters,
-              contents: [{ role: 'user', parts: [{ text: minimalEventText }] }],
+              contents: [...initialContents, { role: 'user', parts: [{ text: userText }] }],
             })
-            console.log('AI response:\n' + standardEventText)
+            console.log('Assistant text:\n' + assistantText)
+            if (assistantText === undefined) {
+              return originalEvent
+            }
+
+            const splitIndex = assistantText?.indexOf('\n')
+            const summary = assistantText?.slice(0, splitIndex)
+            const description = assistantText?.slice(splitIndex + 1)
 
             // combine into the final event
             const standardEvent: CalendarObject = {
               type: 'VEVENT',
               properties: {
                 ...originalEvent.properties,
-                ...fromICS(standardEventText ?? '', 'VEVENT').properties,
-                LOCATION: originalEvent.properties.LOCATION, // ignore AI's version of LOCATION?
-                'LAST-MODIFIED': toTimestamp(new Date()),
+                SUMMARY: summary,
+                DESCRIPTION: description,
               },
+            }
+
+            // convert any event that starts at midnight to an all day events
+            if (
+              typeof standardEvent.properties.DTSTART === 'string' &&
+              standardEvent.properties.DTSTART.endsWith('T000000')
+            ) {
+              const [date] = standardEvent.properties.DTSTART.split('T')
+              standardEvent.properties.DTSTART = date
+              delete standardEvent.properties.DTEND
+            }
+
+            // convert any event that starts/ends at the same time to a 1 or 4 hour event
+            const DTSTART_LOCAL = 'DTSTART;TZID=America/Los_Angeles'
+            const DTEND_LOCAL = 'DTEND;TZID=America/Los_Angeles'
+            const ICS_DATE_FORMAT = `yyyyMMdd'T'HHmmss`
+            if (
+              typeof standardEvent.properties[DTSTART_LOCAL] === 'string' &&
+              standardEvent.properties[DTSTART_LOCAL] === standardEvent.properties[DTEND_LOCAL]
+            ) {
+              const [date, time] = standardEvent.properties[DTSTART_LOCAL].split('T')
+              standardEvent.properties[DTEND_LOCAL] =
+                DateTime.fromFormat(standardEvent.properties[DTSTART_LOCAL], ICS_DATE_FORMAT)
+                  .plus({ hours: standardEvent.properties.LOCATION === 'Zoom' ? 1 : 4 })
+                  .toFormat(ICS_DATE_FORMAT) ?? standardEvent.properties[DTSTART_LOCAL]
             }
 
             // cache this conversion
