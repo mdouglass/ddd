@@ -6,36 +6,68 @@ import { hash } from 'node:crypto'
 import { DateTime } from 'luxon'
 
 const generateParameters: Pick<GenerateContentParameters, 'model' | 'config'> = {
-  model: 'gemini-2.5-flash-preview-04-17',
+  model: 'gemini-2.5-flash-preview-05-20',
   // model: 'gemini-2.5-pro-preview-05-06',
   config: {
     temperature: 0,
     topP: 0.1,
-    systemInstruction: `
-You are an expert in cleaning up and formatting descriptions of events for a trail running team.
-The trail running team consists of multiple groups of various skill levels. 
-The groups are Group 1, Group 2, Group 3 and Group 4. 
-Sometimes groups are combined for a run, so you may see Group 2,3 or Group 2,3,4.
-Level is a synonym for group.
-Sometimes there is an intermediate group, such as Group 2.5 or Level 3.5.
-The name of the team is KHraces Trail Team or DDD (Dirt Divas and Dudes).
+    systemInstruction: `You are an expert AI assistant specialized in cleaning up and formatting event summaries and descriptions for a trail running team. Your goal is to transform raw, potentially messy event information into a concise, standardized summary and a clear, focused description.
 
-The first line of the user's message will be an initial summary of the event. The second and remaining lines will be a description of the event.
-You should reply in the following format:
+**Team Context:**
+The trail running team is named **KHraces Trail Team** or **DDD (Dirt Divas and Dudes)**. It consists of multiple groups/levels with varying skill levels:
+*   **Standard Groups:** Group 1, Group 2, Group 3, Group 4.
+*   **Intermediate Groups:** Group 2.5, Group 3.5.
+*   **Combined Groups:** Groups may be combined for a run (e.g., "Group 2,3", "Group 1 & 2 & 2.5").
+*   **Synonym:** "Level" is a synonym for "group."
 
-Summary will one line of text providing a summary of the type of event
-- Remove "KHraces Trail Team - " from the beginning of the summary
-- If the entire team practices together at a specific real world location, specify Team Practice and the location
-- Otherwise, provide a short description of the type of workout and the mileage 
-  - common workout types are "Easy 8mi", "Hill Repeats 3x1mi", "Long 20mi", "Speed Legs 6mi", "Fast Finish 6mi"
-- If there are extra non-running workouts, add that to the summary as "& Workouts"
-- Use Title Case for the summary
-- If there are workouts and runs, please list the run first, then the workouts
+**Input Format:**
+The user will provide the event information in two main sections:
+1.  The **first line** will be an initial, unformatted summary of the event.
+2.  The **remaining lines** will form the detailed description of the event.
 
-Description will be multiple lines of text describing the event
-- Remove any (Arrival Time:)
-- Remove any Location:
-- If different groups receive different instructions, preferentially provide only the instructions for group 3.5. If group 3.5 does not exist, provide the instructions for group 3.
+**Output Format:**
+You should reply strictly in the following two-part format. Do not include any conversational text or preamble in your response, only the formatted Summary and Description.
+
+\`\`\`
+Summary: [Formatted one-line summary]
+Description:
+[Formatted multi-line description]
+\`\`\`
+
+---
+
+**Detailed Formatting Rules:**
+
+**I. Summary (One Line of Text):**
+
+*   **Initial Cleanup:** Remove the exact phrase "KHraces Trail Team - " from the very beginning of the summary if present.
+*   **Determine Event Type:**
+    *   **Team Practice:** If the original summary indicates a specific real-world location and/or implies a general team event (i.e., not group-specific workouts), format as "Team Practice [Location]".
+        *   *Example:* Original: "KHraces Trail Team - Team practice at Memorial Park" -> "Summary: Team Practice Memorial Park"
+    *   **Workout/Run:** Otherwise, provide a short description of the workout type and mileage.
+        *   **Workout Type:** Prioritize common workout types like "Easy", "Hill Repeats", "Long", "Speed Legs", "Fast Finish". If a specific type isn't explicitly stated but mileage is, use "Run".
+        *   **Mileage:** Always include the mileage (e.g., "8mi", "3x1mi", "20mi", "6mi"). If mileage isn't provided, omit it but maintain the workout type if possible.
+        *   *Example:* Original: "KHraces Trail Team - Group 3.5 Speed Legs 6mi" -> "Summary: Speed Legs 6mi"
+        *   *Example:* Original: "Another long run for Group 1" -> "Summary: Long Run" (if no mileage specified) or "Summary: Long Run 15mi" (if 15mi is inferable from description).
+*   **Non-Running Workouts:** If the event includes additional non-running workouts (e.g., strength, core, stretching, yoga), append "& Workouts" to the summary.
+    *   **Order:** If both a run and non-running workouts are present, list the run first, then the workouts.
+    *   *Example:* "Speed Legs 6mi & Workouts"
+    *   *Example:* "Team Practice Memorial Park & Workouts"
+*   **Case:** The entire summary line must be in **Title Case**.
+
+**II. Description (Multiple Lines of Text):**
+
+*   **Content Removal:**
+    *   Remove any instances of the exact phrase "(Arrival Time:)" including any text that immediately follows it on the same line (e.g., "(Arrival Time: 6:30 AM)").
+    *   Remove any instances of the exact phrase "Location:" including any text that immediately follows it on the same line (e.g., "Location: Green Mountain Trailhead").
+*   **Group-Specific Instructions (CRITICAL):**
+    *   **Prioritization:** Identify sections within the description that contain instructions specific to certain groups. Your goal is to provide the most relevant details for the higher-level groups.
+        1.  If instructions for **Group 3.5** are present, *only* include those specific instructions in the final description. Remove all other group-specific instructions.
+        2.  If Group 3.5 instructions are *not* present, but instructions for **Group 3** *are*, *only* include those specific Group 3 instructions. Remove all other group-specific instructions.
+        3.  If neither Group 3.5 nor Group 3 instructions are present, but other group-specific instructions *do* exist (e.g., for Group 1, 2, or 4), synthesize the general plan that applies broadly or to the most prominent/highest groups mentioned. If the description details multiple groups, extract the most comprehensive or challenging details, aiming for a general understanding.
+    *   **General Instructions:** Always include any general instructions that apply to *all* groups, regardless of group-specific sections (e.g., "Bring water and sunscreen," "Meet at the trailhead by 7 AM"). These should be placed before any group-specific details.
+    *   **Coherence:** Ensure the final description flows naturally and coherently after applying these filtering rules.
+*   **Formatting Preservation:** Maintain original formatting within the *selected* description content (e.g., bullet points, line breaks, bolding) unless a removal rule dictates otherwise.
 `,
   },
 }
@@ -96,6 +128,15 @@ const initialContents: Content[] = [
     ],
   },
   { role: 'model', parts: [{ text: `Rest\nRest` }] },
+  {
+    role: 'user',
+    parts: [
+      {
+        text: `10-12 miles\n\nSummary: KHraces Trail Team - SEE NOTES\nDescription: Group 1: 8 miles \nGroup 2: 10 miles \nGroup 2.5: 10-12 miles \nGroup 3: 12-14 miles \nGroup 4: 16 miles  (Arrival Time:  6:45 AM (Pacific Time (US & Canada)))`,
+      },
+    ],
+  },
+  { role: 'model', parts: [{ text: `Long 12-14mi\n12-14 miles` }] },
 ]
 
 export function toMinimalEvent(event: CalendarObject): CalendarObject {
