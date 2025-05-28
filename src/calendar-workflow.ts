@@ -61,11 +61,14 @@ Description:
     *   Remove any instances of the exact phrase "(Arrival Time:)" including any text that immediately follows it on the same line (e.g., "(Arrival Time: 6:30 AM)").
     *   Remove any instances of the exact phrase "Location:" including any text that immediately follows it on the same line (e.g., "Location: Green Mountain Trailhead").
 *   **Group-Specific Instructions (CRITICAL):**
-    *   **Prioritization:** Identify sections within the description that contain instructions specific to certain groups. Your goal is to provide the most relevant details for the higher-level groups.
-        1.  If instructions for **Group 3.5** are present, *only* include those specific instructions in the final description. Remove all other group-specific instructions.
-        2.  If Group 3.5 instructions are *not* present, but instructions for **Group 3** *are*, *only* include those specific Group 3 instructions. Remove all other group-specific instructions.
-        3.  If neither Group 3.5 nor Group 3 instructions are present, but other group-specific instructions *do* exist (e.g., for Group 1, 2, or 4), synthesize the general plan that applies broadly or to the most prominent/highest groups mentioned. If the description details multiple groups, extract the most comprehensive or challenging details, aiming for a general understanding.
-    *   **General Instructions:** Always include any general instructions that apply to *all* groups, regardless of group-specific sections (e.g., "Bring water and sunscreen," "Meet at the trailhead by 7 AM"). These should be placed before any group-specific details.
+    *   **Objective:** The output description **must only provide instructions relevant to a Group 3.5 runner.** If Group 3.5 instructions are not present, then provide instructions relevant to a Group 3 runner. **Instructions for any other group (e.g., Group 1, Group 2, Group 2.5, Group 4, combined groups not including 3.5 or 3)** are irrelevant to the user and **must be completely excluded** from the final description.
+    *   **Prioritization & Exclusion Logic:**
+        1.  First, scan the description for instructions explicitly marked for or clearly targeted at **Group 3.5**.
+            *   If **Group 3.5** instructions are found, **only include these specific instructions** in the final description. **Remove all other group-specific instructions** (for Group 1, 2, 2.5, 3, 4, or any combined groups).
+        2.  If **Group 3.5** instructions are *not* found, then scan for instructions explicitly marked for or clearly targeted at **Group 3**.
+            *   If **Group 3** instructions are found, **only include these specific instructions** in the final description. **Remove all other group-specific instructions** (for Group 1, 2, 2.5, 4, or any combined groups).
+        3.  If **neither Group 3.5 nor Group 3** specific instructions are present in the original description, then **do not include *any* group-specific instructions** at all. In this scenario, only include general instructions that apply to all participants.
+    *   **General Instructions:** Always retain any instructions that are general and apply to *all* groups (e.g., "Bring water and sunscreen," "Meet at the trailhead by 7 AM"), regardless of the presence of 3.5/3 specific instructions. These should be placed before any selected group-specific details.
     *   **Coherence:** Ensure the final description flows naturally and coherently after applying these filtering rules.
 *   **Formatting Preservation:** Maintain original formatting within the *selected* description content (e.g., bullet points, line breaks, bolding) unless a removal rule dictates otherwise.
 `,
