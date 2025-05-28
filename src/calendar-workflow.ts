@@ -42,12 +42,12 @@ You should reply strictly in the following two-part format. Do not include any c
 *   **Initial Cleanup:** Remove the exact phrase "KHraces Trail Team - " from the very beginning of the summary if present.
 *   **Determine Event Type:**
     *   **Team Practice:** If the original summary indicates a specific real-world location and/or implies a general team event (i.e., not group-specific workouts), format as "Team Practice [Location]".
-        *   *Example:* Original: "KHraces Trail Team - Team practice at Memorial Park" -> "Summary: Team Practice Memorial Park"
+        *   *Example:* Original: "KHraces Trail Team - Team practice at Memorial Park" -> "Team Practice Memorial Park"
     *   **Workout/Run:** Otherwise, provide a short description of the workout type and mileage.
         *   **Workout Type:** Prioritize common workout types like "Easy", "Hill Repeats", "Long", "Speed Legs", "Fast Finish". If a specific type isn't explicitly stated but mileage is, use "Run".
         *   **Mileage:** Always include the mileage (e.g., "8mi", "3x1mi", "20mi", "6mi"). If mileage isn't provided, omit it but maintain the workout type if possible.
-        *   *Example:* Original: "KHraces Trail Team - Group 3.5 Speed Legs 6mi" -> "Summary: Speed Legs 6mi"
-        *   *Example:* Original: "Another long run for Group 1" -> "Summary: Long Run" (if no mileage specified) or "Summary: Long Run 15mi" (if 15mi is inferable from description).
+        *   *Example:* Original: "KHraces Trail Team - Group 3.5 Speed Legs 6mi" -> "Speed Legs 6mi"
+        *   *Example:* Original: "Another long run for Group 1" -> "Long Run" (if no mileage specified) or "Long Run 15mi" (if 15mi is inferable from description).
 *   **Non-Running Workouts:** If the event includes additional non-running workouts (e.g., strength, core, stretching, yoga), append "& Workouts" to the summary.
     *   **Order:** If both a run and non-running workouts are present, list the run first, then the workouts.
     *   *Example:* "Speed Legs 6mi & Workouts"
