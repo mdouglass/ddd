@@ -213,7 +213,10 @@ export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
               properties: {
                 ...originalEvent.properties,
                 SUMMARY: summary,
-                DESCRIPTION: description,
+                DESCRIPTION: `${description}
+                
+Summary: ${originalEvent.properties.SUMMARY}
+Description: ${originalEvent.properties.DESCRIPTION}`,
               },
             }
 
