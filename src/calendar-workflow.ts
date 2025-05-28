@@ -29,8 +29,7 @@ The user will provide the event information in two main sections:
 You should reply strictly in the following two-part format. Do not include any conversational text or preamble in your response, only the formatted Summary and Description.
 
 \`\`\`
-Summary: [Formatted one-line summary]
-Description:
+[Formatted one-line summary]
 [Formatted multi-line description]
 \`\`\`
 
@@ -135,7 +134,7 @@ const initialContents: Content[] = [
     role: 'user',
     parts: [
       {
-        text: `10-12 miles\n\nSummary: KHraces Trail Team - SEE NOTES\nDescription: Group 1: 8 miles \nGroup 2: 10 miles \nGroup 2.5: 10-12 miles \nGroup 3: 12-14 miles \nGroup 4: 16 miles  (Arrival Time:  6:45 AM (Pacific Time (US & Canada)))`,
+        text: `KHraces Trail Team - SEE NOTES\nGroup 1: 8 miles \nGroup 2: 10 miles \nGroup 2.5: 10-12 miles \nGroup 3: 12-14 miles \nGroup 4: 16 miles  (Arrival Time:  6:45 AM (Pacific Time (US & Canada)))`,
       },
     ],
   },
