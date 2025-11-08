@@ -23,7 +23,12 @@ export default {
         return new Response(await getOriginal(env.DDD_ICS), responseHeaders)
       case '/group3.ics':
         return new Response(
-          await convertAI(env, url, await getOriginal(env.DDD_ICS)),
+          await convertAI(env, url, await getOriginal(env.DDD_ICS), 3),
+          responseHeaders,
+        )
+      case '/group4.ics':
+        return new Response(
+          await convertAI(env, url, await getOriginal(env.DDD_ICS), 4),
           responseHeaders,
         )
       case '/group3-legacy.ics':

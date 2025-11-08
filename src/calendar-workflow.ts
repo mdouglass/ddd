@@ -5,13 +5,16 @@ import { Content, GenerateContentParameters, GoogleGenAI } from '@google/genai'
 import { hash } from 'node:crypto'
 import { DateTime } from 'luxon'
 
-const generateParameters: Pick<GenerateContentParameters, 'model' | 'config'> = {
-  model: 'gemini-2.5-flash-preview-05-20',
-  // model: 'gemini-2.5-pro-preview-05-06',
-  config: {
-    temperature: 0,
-    topP: 0.1,
-    systemInstruction: `You are an expert AI assistant specialized in cleaning up and formatting event summaries and descriptions for a trail running team. Your goal is to transform raw, potentially messy event information into a concise, standardized summary and a clear, focused description.
+function makeGenerateParameters(
+  group: number,
+): Pick<GenerateContentParameters, 'model' | 'config'> {
+  return {
+    model: 'gemini-2.5-flash-preview-05-20',
+    // model: 'gemini-2.5-pro-preview-05-06',
+    config: {
+      temperature: 0,
+      topP: 0.1,
+      systemInstruction: `You are an expert AI assistant specialized in cleaning up and formatting event summaries and descriptions for a trail running team. Your goal is to transform raw, potentially messy event information into a concise, standardized summary and a clear, focused description.
 
 **Team Context:**
 The trail running team is named **KHraces Trail Team** or **DDD (Dirt Divas and Dudes)**. It consists of multiple groups/levels with varying skill levels:
@@ -61,18 +64,19 @@ You should reply strictly in the following two-part format: a single line for th
     *   Remove any instances of the exact phrase "(Arrival Time:)" including any text that immediately follows it on the same line (e.g., "(Arrival Time: 6:30 AM)").
     *   Remove any instances of the exact phrase "Location:" including any text that immediately follows it on the same line (e.g., "Location: Green Mountain Trailhead").
 *   **Group-Specific Instructions (CRITICAL):**
-    *   **Objective:** The output description **must only provide instructions relevant to a Group 3.5 runner.** If Group 3.5 instructions are not present, then provide instructions relevant to a Group 3 runner. **Instructions for any other group (e.g., Group 1, Group 2, Group 2.5, Group 4, combined groups not including 3.5 or 3)** are irrelevant to the user and **must be completely excluded** from the final description.
+    *   **Objective:** The output description **must only provide instructions relevant to a Group ${group}.5 runner.** If Group ${group}.5 instructions are not present, then provide instructions relevant to a Group ${group} runner. **Instructions for any other group (e.g., Group 1, Group 2, Group 2.5, or combined groups not including ${group}.5 or ${group})** are irrelevant to the user and **must be completely excluded** from the final description.
     *   **Prioritization & Exclusion Logic:**
-        1.  First, scan the description for instructions explicitly marked for or clearly targeted at **Group 3.5**.
-            *   If **Group 3.5** instructions are found, **only include these specific instructions** in the final description. **Remove all other group-specific instructions** (for Group 1, 2, 2.5, 3, 4, or any combined groups).
-        2.  If **Group 3.5** instructions are *not* found, then scan for instructions explicitly marked for or clearly targeted at **Group 3**.
-            *   If **Group 3** instructions are found, **only include these specific instructions** in the final description. **Remove all other group-specific instructions** (for Group 1, 2, 2.5, 4, or any combined groups).
-        3.  If **neither Group 3.5 nor Group 3** specific instructions are present in the original description, then **do not include *any* group-specific instructions** at all. In this scenario, only include general instructions that apply to all participants.
-    *   **General Instructions:** Always retain any instructions that are general and apply to *all* groups (e.g., "Bring water and sunscreen," "Meet at the trailhead by 7 AM"), regardless of the presence of 3.5/3 specific instructions. These should be placed before any selected group-specific details.
+        1.  First, scan the description for instructions explicitly marked for or clearly targeted at **Group ${group}.5**.
+            *   If **Group ${group}.5** instructions are found, **only include these specific instructions** in the final description. **Remove all other group-specific instructions**.
+        2.  If **Group ${group}.5** instructions are *not* found, then scan for instructions explicitly marked for or clearly targeted at **Group ${group}**.
+            *   If **Group ${group}** instructions are found, **only include these specific instructions** in the final description. **Remove all other group-specific instructions**.
+        3.  If **neither Group ${group}.5 nor Group ${group}** specific instructions are present in the original description, then **do not include *any* group-specific instructions** at all. In this scenario, only include general instructions that apply to all participants.
+    *   **General Instructions:** Always retain any instructions that are general and apply to *all* groups (e.g., "Bring water and sunscreen," "Meet at the trailhead by 7 AM"), regardless of the presence of group-specific instructions. These should be placed before any selected group-specific details.
     *   **Coherence:** Ensure the final description flows naturally and coherently after applying these filtering rules.
 *   **Formatting Preservation:** Maintain original formatting within the *selected* description content (e.g., bullet points, line breaks, bolding) unless a removal rule dictates otherwise.
 `,
-  },
+    },
+  }
 }
 
 const initialContents: Content[] = [
@@ -201,7 +205,7 @@ export async function putStandardEvent(
 
 export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
   override async run(
-    event: Readonly<WorkflowEvent<{ calendarText: string; isRetry: boolean }>>,
+    event: Readonly<WorkflowEvent<{ calendarText: string; isRetry: boolean; group: number }>>,
     step: WorkflowStep,
   ) {
     const calendar = await step.do('parse ICS', async () => {
@@ -239,7 +243,7 @@ export class CalendarWorkflow extends WorkflowEntrypoint<Env> {
             // run it through the agent
             const ai = new GoogleGenAI({ apiKey: this.env.GEMINI_API_KEY })
             const { text: assistantText } = await ai.models.generateContent({
-              ...generateParameters,
+              ...makeGenerateParameters(event.payload.group),
               contents: [...initialContents, { role: 'user', parts: [{ text: userText }] }],
             })
             console.log('Assistant text:\n' + assistantText)

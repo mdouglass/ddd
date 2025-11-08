@@ -96,7 +96,7 @@ async function getOrCreateWorkflow<PARAMS>(
   }
 }
 
-export async function convertAI(env: Env, url: URL, calendarText: string): Promise<string> {
+export async function convertAI(env: Env, url: URL, calendarText: string, group: number): Promise<string> {
   try {
     const retry = url.searchParams.get('retry') ?? ''
     const isRetry = retry.length > 0
@@ -105,7 +105,7 @@ export async function convertAI(env: Env, url: URL, calendarText: string): Promi
     // do we have a completed and converted calendar
     const workflow = await getOrCreateWorkflow(env.CALENDAR_WORKFLOW, {
       id: calendarHash,
-      params: { calendarText, isRetry },
+      params: { calendarText, isRetry, group },
     })
     const status = await workflow.status()
     if (status.status === 'complete' && typeof status.output === 'string') {
